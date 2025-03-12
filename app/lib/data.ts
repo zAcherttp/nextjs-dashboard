@@ -5,7 +5,7 @@ import {
   CustomersTableType,
   InvoiceForm,
   InvoicesTable,
-  LatestInvoiceRaw,
+  LatestInvoice,
   Revenue,
 } from "./definitions";
 import { formatCurrency } from "./utils";
@@ -15,14 +15,14 @@ export async function fetchRevenue() {
     // Artificially delay a response for demo purposes.
     // Don't do this in production :)
 
-    // console.log('Fetching revenue data...');
-    // await new Promise((resolve) => setTimeout(resolve, 3000));
+    console.log('Fetching revenue data...');
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const { data, error } = await supabase.from("revenue").select("*");
 
-    // console.log('Data fetch completed after 3 seconds.');
-
-    return data;
+    console.log('Data fetch completed after 3 seconds.');
+    const revenues: Revenue[] = data as Revenue[];
+    return revenues;
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to fetch revenue data.");
@@ -47,14 +47,18 @@ export async function fetchLatestInvoices() {
       .order("date", { ascending: false })
       .limit(5);
 
-    if (!data) {
-      throw new Error("Fetched data is empty.");
-    }
-    const latestInvoices = data.map((invoice) => ({
-      ...invoice,
-      amount: formatCurrency(invoice.amount),
-    }));
-    return latestInvoices;
+     if (error) {
+       console.error("Database Error:", error);
+       throw new Error("Failed to fetch the latest invoices.");
+     }
+     const latestInvoices: LatestInvoice[] = data.map((invoice: any) => ({
+       id: invoice.id,
+       name: invoice.name,
+       email: invoice.email,
+       image_url: invoice.image_url,
+       amount: formatCurrency(invoice.amount),
+     }));
+     return latestInvoices;
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to fetch the latest invoices.");
@@ -63,37 +67,20 @@ export async function fetchLatestInvoices() {
 
 export async function fetchCardData() {
   try {
-    // You can probably combine these into a single SQL query
-    // However, we are intentionally splitting them to demonstrate
-    // how to initialize multiple queries in parallel with JS.
-
-    const { count: invoiceCountPromise, error: invoiceCountError } =
-      await supabase
-        .from("invoices")
-        .select("*", { count: "exact", head: true });
-    const { count: customerCountPromise, error: customerCountError } =
-      await supabase
-        .from("customers")
-        .select("*", { count: "exact", head: true });
-    const { data: invoiceStatusPromise, error: invoiceStatusError } =
-      await supabase.rpc("get_invoice_status_summary");
-    const data = await Promise.all([
-      invoiceCountPromise,
-      customerCountPromise,
-      invoiceStatusPromise,
+    const [invoiceCountResult, customerCountResult, invoiceStatusResult] = await Promise.all([
+      supabase.from("invoices").select("*", { count: "exact", head: true }),
+      supabase.from("customers").select("*", { count: "exact", head: true }),
+      supabase.rpc("get_invoice_status_summary")
     ]);
 
-    if (invoiceCountError || customerCountError || invoiceStatusError) {
+    if (invoiceCountResult.error || customerCountResult.error || invoiceStatusResult.error) {
       throw new Error("Failed to fetch card data.");
     }
-    if (!data[0] || !data[1] || !data[2]) {
-      throw new Error("Fetched data is empty.");
-    }
 
-    const numberOfInvoices = Number(data[0] ?? "0");
-    const numberOfCustomers = Number(data[1] ?? "0");
-    const totalPaidInvoices = formatCurrency(data[2][0].paid ?? "0");
-    const totalPendingInvoices = formatCurrency(data[2][0].pending ?? "0");
+    const numberOfInvoices = Number(invoiceCountResult.count ?? "0");
+    const numberOfCustomers = Number(customerCountResult.count ?? "0");
+    const totalPaidInvoices = formatCurrency(invoiceStatusResult.data?.[0].paid ?? "0");
+    const totalPendingInvoices = formatCurrency(invoiceStatusResult.data?.[0].pending ?? "0");
 
     return {
       numberOfCustomers,
@@ -129,19 +116,16 @@ export async function fetchFilteredInvoices(
 
 export async function fetchInvoicesPages(query: string) {
   try {
-    const data = await sql`SELECT COUNT(*)
-    FROM invoices
-    JOIN customers ON invoices.customer_id = customers.id
-    WHERE
-      customers.name ILIKE ${`%${query}%`} OR
-      customers.email ILIKE ${`%${query}%`} OR
-      invoices.amount::text ILIKE ${`%${query}%`} OR
-      invoices.date::text ILIKE ${`%${query}%`} OR
-      invoices.status ILIKE ${`%${query}%`}
-  `;
+    const { data, error } = await supabase.rpc("count_filtered_invoices", {
+      search_query: query,
+    });
 
-    const totalPages = Math.ceil(Number(data[0].count) / ITEMS_PER_PAGE);
-    return totalPages;
+    if (error) {
+      console.error("Database Error:", error);
+    } else {
+      const totalPages = Math.ceil(data / ITEMS_PER_PAGE);
+      return totalPages;
+    }
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to fetch total number of invoices.");
@@ -150,23 +134,25 @@ export async function fetchInvoicesPages(query: string) {
 
 export async function fetchInvoiceById(id: string) {
   try {
-    const data = await sql<InvoiceForm[]>`
-      SELECT
-        invoices.id,
-        invoices.customer_id,
-        invoices.amount,
-        invoices.status
-      FROM invoices
-      WHERE invoices.id = ${id};
-    `;
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("*, customers!inner(email, name)")
+      .eq("id", id)
+      .single();
 
-    const invoice = data.map((invoice) => ({
-      ...invoice,
-      // Convert amount from cents to dollars
-      amount: invoice.amount / 100,
-    }));
+    if (error) {
+      console.error("Database Error:", error);
+      throw error;
+    }
 
-    return invoice[0];
+    const invoice: InvoiceForm = {
+      id: data.id,
+      customer_id: data.customer_id,
+      amount: data.amount / 100, // Convert amount from cents to dollars
+      status: data.status as "pending" | "paid",
+    };
+
+    return invoice;
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to fetch invoice.");
@@ -175,48 +161,30 @@ export async function fetchInvoiceById(id: string) {
 
 export async function fetchCustomers() {
   try {
-    const customers = await sql<CustomerField[]>`
-      SELECT
-        id,
-        name
-      FROM customers
-      ORDER BY name ASC
-    `;
+    const { data, error } = await supabase
+      .from("customers")
+      .select("*")
+      .order("name", { ascending: true });
 
-    return customers;
-  } catch (err) {
-    console.error("Database Error:", err);
+    return data;
+  } catch (error) {
+    console.error("Database Error:", error);
     throw new Error("Failed to fetch all customers.");
   }
 }
 
 export async function fetchFilteredCustomers(query: string) {
   try {
-    const data = await sql<CustomersTableType[]>`
-		SELECT
-		  customers.id,
-		  customers.name,
-		  customers.email,
-		  customers.image_url,
-		  COUNT(invoices.id) AS total_invoices,
-		  SUM(CASE WHEN invoices.status = 'pending' THEN invoices.amount ELSE 0 END) AS total_pending,
-		  SUM(CASE WHEN invoices.status = 'paid' THEN invoices.amount ELSE 0 END) AS total_paid
-		FROM customers
-		LEFT JOIN invoices ON customers.id = invoices.customer_id
-		WHERE
-		  customers.name ILIKE ${`%${query}%`} OR
-        customers.email ILIKE ${`%${query}%`}
-		GROUP BY customers.id, customers.name, customers.email, customers.image_url
-		ORDER BY customers.name ASC
-	  `;
+    const { data, error } = await supabase.rpc("fetch_filtered_customers", {
+      search_query: query,
+    });
 
-    const customers = data.map((customer) => ({
-      ...customer,
-      total_pending: formatCurrency(customer.total_pending),
-      total_paid: formatCurrency(customer.total_paid),
-    }));
+    if (error) {
+      throw error;
+    }
 
-    return customers;
+    const customersTable: CustomersTableType[] = data;
+    return customersTable;
   } catch (err) {
     console.error("Database Error:", err);
     throw new Error("Failed to fetch customer table.");

@@ -1,5 +1,4 @@
 import {
-  Database,
   Tables,
   TablesInsert,
   TablesUpdate,

@@ -9,127 +9,146 @@ export type Json =
 export type Database = {
   graphql_public: {
     Tables: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
       graphql: {
         Args: {
-          operationName?: string
-          query?: string
-          variables?: Json
-          extensions?: Json
-        }
-        Returns: Json
-      }
-    }
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+          extensions?: Json;
+        };
+        Returns: Json;
+      };
+    };
     Enums: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
+      [_ in never]: never;
+    };
+  };
   public: {
     Tables: {
       customers: {
         Row: {
-          email: string
-          id: string
-          image_url: string
-          name: string
-        }
+          email: string;
+          id: string;
+          image_url: string;
+          name: string;
+        };
         Insert: {
-          email: string
-          id?: string
-          image_url: string
-          name: string
-        }
+          email: string;
+          id?: string;
+          image_url: string;
+          name: string;
+        };
         Update: {
-          email?: string
-          id?: string
-          image_url?: string
-          name?: string
-        }
-        Relationships: []
-      }
+          email?: string;
+          id?: string;
+          image_url?: string;
+          name?: string;
+        };
+        Relationships: [];
+      };
       invoices: {
         Row: {
-          amount: number
-          customer_id: string
-          date: string
-          id: string
-          status: string
-        }
+          amount: number;
+          customer_id: string;
+          date: string;
+          id: string;
+          status: string;
+        };
         Insert: {
-          amount: number
-          customer_id: string
-          date: string
-          id?: string
-          status: string
-        }
+          amount: number;
+          customer_id: string;
+          date: string;
+          id?: string;
+          status: string;
+        };
         Update: {
-          amount?: number
-          customer_id?: string
-          date?: string
-          id?: string
-          status?: string
-        }
-        Relationships: []
-      }
+          amount?: number;
+          customer_id?: string;
+          date?: string;
+          id?: string;
+          status?: string;
+        };
+        Relationships: [];
+      };
       revenue: {
         Row: {
-          month: string
-          revenue: number
-        }
+          month: string;
+          revenue: number;
+        };
         Insert: {
-          month: string
-          revenue: number
-        }
+          month: string;
+          revenue: number;
+        };
         Update: {
-          month?: string
-          revenue?: number
-        }
-        Relationships: []
-      }
+          month?: string;
+          revenue?: number;
+        };
+        Relationships: [];
+      };
       users: {
         Row: {
-          email: string
-          id: string
-          name: string
-          password: string
-        }
+          email: string;
+          id: string;
+          name: string;
+          password: string;
+        };
         Insert: {
-          email: string
-          id?: string
-          name: string
-          password: string
-        }
+          email: string;
+          id?: string;
+          name: string;
+          password: string;
+        };
         Update: {
-          email?: string
-          id?: string
-          name?: string
-          password?: string
-        }
-        Relationships: []
-      }
-    }
+          email?: string;
+          id?: string;
+          name?: string;
+          password?: string;
+        };
+        Relationships: [];
+      };
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
-      [_ in never]: never
-    }
+      fetch_filtered_customers: {
+        Args: { search_query: string };
+        Returns: any[];
+      };
+      fetch_filtered_invoices: {
+        Args: {
+          search_query: string;
+          search_offset: number;
+          search_limit: number;
+        };
+        Returns: any[];
+      };
+      count_filtered_invoices: {
+        Args: { search_query: string };
+        Returns: number;
+      };
+      get_invoice_status_summary: {
+        Args: Record<string, never>;
+        Returns: { paid: number; pending: number }[];
+      };
+    };
     Enums: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
+      [_ in never]: never;
+    };
+  };
+};
 
 type PublicSchema = Database[Extract<keyof Database, "public">]
 

@@ -1,40 +1,48 @@
-import { supabase } from "../utils/supabase";
+import { fetchInvoicesPages } from "../lib/data";
+import { CustomersTableType, LatestInvoice } from "../lib/definitions";
 import { formatCurrency } from "../lib/utils";
-import { off } from "process";
+import { supabase } from "../utils/supabase";
+import { Revenue,LatestInvoiceRaw } from "../lib/definitions";
 
-async function listInvoices() {
-  const { data, error } = await supabase
-    .from("customers")
-    .select(
-      `name,
-    invoices!inner(amount)`
-    )
-    .eq("invoices.amount", 666);
-  if (error) throw error;
+export async function testing() {
+   try {
+     const { data, error } = await supabase
+       .from("invoices")
+       .select(
+         `
+        amount,
+        ...customers!inner(
+          name,
+          image_url,
+          email
+        ),
+        id
+      `
+       )
+       .order("date", { ascending: false })
+       .limit(5);
 
-  return data;
-}
-
-const ITEMS_PER_PAGE = 6;
-export async function testing(query: string, currentPage: number) {
-  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
-
-  try {
-    const { data, error } = await supabase.rpc("fetch_filtered_invoices", {
-      search_query: query,
-      search_offset: offset,
-      search_limit: ITEMS_PER_PAGE,
-    });
-    return data;
-  } catch (error) {
-    console.error("Database Error:", error);
-    throw new Error("Failed to fetch invoices.");
-  }
+     if (error) {
+      console.error("Database Error:", error);
+      throw new Error("Failed to fetch the latest invoices.");
+    }
+     const latestInvoices: LatestInvoice[] = data.map((invoice: any) => ({
+       id: invoice.id,
+       name: invoice.name,
+       email: invoice.email,
+       image_url: invoice.image_url,
+       amount: formatCurrency(invoice.amount),    
+     }));
+     return latestInvoices;
+   } catch (error) {
+     console.error("Database Error:", error);
+     throw new Error("Failed to fetch the latest invoices.");
+   }
 }
 
 export async function GET() {
   try {
-    return Response.json(await testing("balaz", 1));
+    return Response.json(await testing());
   } catch (error) {
     return Response.json({ error }, { status: 500 });
   }
