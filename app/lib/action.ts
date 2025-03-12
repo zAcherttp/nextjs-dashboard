@@ -14,6 +14,7 @@ const FormSchema = z.object({
 });
 
 const CreateInvoice = FormSchema.omit({ id: true, date: true });
+const UpdateInvoice = FormSchema.omit({ id: true, date: true });
 
 export async function createInvoice(formData: FormData) {
   const { customerId, amount, status } = CreateInvoice.parse({
@@ -24,19 +25,51 @@ export async function createInvoice(formData: FormData) {
   const amountInCents = amount * 100;
   const date = new Date().toISOString().split("T")[0];
 
-  const { error } = await supabase
-    .from(`invoices`)
-    .insert({
-      customer_id: customerId,
-      amount: amountInCents,
-      status: status,
-      date: date,
-    });
+  const { error } = await supabase.from(`invoices`).insert({
+    customer_id: customerId,
+    amount: amountInCents,
+    status: status,
+    date: date,
+  });
 
   if (error) {
     console.log(error);
-    throw new Error("Failed to create invoice");
+    throw new Error("Failed to insert invoice");
   }
   revalidatePath("/dashboard/invoices");
   redirect("/dashboard/invoices");
+}
+
+export async function updateInvoice(id: string, formData: FormData) {
+  const { customerId, amount, status } = UpdateInvoice.parse({
+    customerId: formData.get("customerId"),
+    amount: formData.get("amount"),
+    status: formData.get("status"),
+  });
+  const amountInCents = amount * 100;
+  const { error } = await supabase
+    .from("invoices")
+    .update({
+      customer_id: customerId,
+      amount: amountInCents,
+      status: status,
+    })
+    .eq("id", id);
+
+  if (error) {
+    console.log(error);
+    throw new Error("Failed to update invoice");
+  }
+  revalidatePath("/dashboard/invoices");
+  redirect("/dashboard/invoices");
+}
+
+export async function deleteInvoice(id: string) {
+  const { error } = await supabase.from("invoices").delete().eq("id", id);
+
+  if (error) {
+    console.log(error);
+    throw new Error("Failed to delete invoice");
+  }
+  revalidatePath("/dashboard/invoices");
 }
