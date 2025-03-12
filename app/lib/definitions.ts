@@ -24,12 +24,13 @@ export type LatestInvoiceRaw = Omit<LatestInvoice, "amount"> & {
   amount: number;
 };
 
-export type InvoicesTable = Tables<"invoices"> & {
+export type InvoicesTableRaw = Tables<"invoices"> & {
   name: string;
   email: string;
   image_url: string;
-  status: "pending" | "paid";
 };
+
+export type InvoicesTable = Omit<InvoicesTableRaw, "customer_id">
 
 export type CustomersTableType = {
   id: string;
