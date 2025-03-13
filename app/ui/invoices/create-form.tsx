@@ -1,16 +1,16 @@
-'use client'
+"use client";
 
-import { CustomerField } from '@/app/lib/definitions';
-import Link from 'next/link';
+import { CustomerField } from "@/app/lib/definitions";
+import Link from "next/link";
 import {
   CheckIcon,
   ClockIcon,
   CurrencyDollarIcon,
   UserCircleIcon,
-} from '@heroicons/react/24/outline';
-import { Button } from '@/app/ui/button';
-import { useActionState } from 'react';
-import { createInvoice, State } from '@/app/lib/action';
+} from "@heroicons/react/24/outline";
+import { Button } from "@/app/ui/button";
+import { useActionState } from "react";
+import { createInvoice, State } from "@/app/lib/actions";
 
 export default function Form({ customers }: { customers: CustomerField[] }) {
   const initialState: State = { message: null, errors: {} };
@@ -134,8 +134,8 @@ export default function Form({ customers }: { customers: CustomerField[] }) {
             ))}
         </div>
         <div id="not-filled-error" aria-live="polite" aria-atomic="true">
-          {(state.errors?.customerId || 
-            state.errors?.amount || 
+          {(state.errors?.customerId ||
+            state.errors?.amount ||
             state.errors?.status) && (
             <p className="mt-2 text-sm text-red-500">
               Please fill in all fields.
