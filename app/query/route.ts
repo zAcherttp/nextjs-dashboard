@@ -16,14 +16,14 @@ export async function testing(term: string) {
       console.error("Database Error:", error);
       throw new Error("Failed to fetch filtered invoices.");
     }
-    const invoicesTable: InvoicesTable[] = data.map((invoice: any) => ({
+    const invoicesTable: InvoicesTable[] = data.map((invoice) => ({
       amount: invoice.amount,
       id: invoice.id,
       date: invoice.date,
       status: invoice.status,
-      name: invoice.customer_name,
-      email: invoice.customer_email,
-      image_url: invoice.customer_image_url,
+      name: invoice.name,
+      email: invoice.email,
+      image_url: invoice.image_url,
     }));
     return invoicesTable;
   } catch (error) {

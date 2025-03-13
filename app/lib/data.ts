@@ -1,4 +1,3 @@
-import { count } from "console";
 import { supabase } from "../utils/supabase";
 import {
   CustomerField,
@@ -11,22 +10,16 @@ import {
 import { formatCurrency } from "./utils";
 
 export async function fetchRevenue() {
-  try {
-    // Artificially delay a response for demo purposes.
-    // Don't do this in production :)
-
-    console.log("Fetching revenue data...");
-    // await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const { data, error } = await supabase.from("revenue").select("*");
 
-    // console.log('Data fetch completed after 3 seconds.');
+    if(error) {
+      console.error(error);
+      throw new Error("Failed to fetch revenues")
+    }
+
     const revenues: Revenue[] = data as Revenue[];
     return revenues;
-  } catch (error) {
-    console.error("Database Error:", error);
-    throw new Error("Failed to fetch revenue data.");
-  }
 }
 
 export async function fetchLatestInvoices() {
@@ -51,7 +44,7 @@ export async function fetchLatestInvoices() {
       console.error("Database Error:", error);
       throw new Error("Failed to fetch the latest invoices.");
     }
-    const latestInvoices: LatestInvoice[] = data.map((invoice: any) => ({
+    const latestInvoices: LatestInvoice[] = data.map((invoice) => ({
       id: invoice.id,
       name: invoice.name,
       email: invoice.email,
@@ -120,14 +113,14 @@ export async function fetchFilteredInvoices(
       console.error("Database Error:", error);
       throw new Error("Failed to fetch filtered invoices.");
     }
-    const invoicesTable: InvoicesTable[] = data.map((invoice: any) => ({
+    const invoicesTable: InvoicesTable[] = data.map((invoice) => ({
       amount: invoice.amount,
       id: invoice.id,
       date: invoice.date,
       status: invoice.status,
-      name: invoice.customer_name,
-      email: invoice.customer_email,
-      image_url: invoice.customer_image_url,
+      name: invoice.name,
+      email: invoice.email,
+      image_url: invoice.image_url,
     }));
     return invoicesTable;
   } catch (error) {
@@ -163,6 +156,9 @@ export async function fetchInvoiceById(id: string) {
       .single();
 
     if (error) {
+      if (error.code === 'PGRST116') { // No rows returned error
+        return null;
+      }
       console.error("Database Error:", error);
       throw error;
     }
@@ -170,7 +166,7 @@ export async function fetchInvoiceById(id: string) {
     const invoice: InvoiceForm = {
       id: data.id,
       customer_id: data.customer_id,
-      amount: data.amount / 100, // Convert amount from cents to dollars
+      amount: data.amount / 100,
       status: data.status as "pending" | "paid",
     };
 
